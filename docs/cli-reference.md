@@ -744,6 +744,15 @@ Stop a group chat's moderator and participants
 | -------- | ------------------------------ | ------- |
 | `--json` | Output as JSON (for scripting) | -       |
 
+## `maestro-cli group-chat archive <chat>`
+
+Archive a group chat (stops its moderator and participants); --restore brings it back
+
+| Option      | Description                    | Default |
+| ----------- | ------------------------------ | ------- |
+| `--restore` | Unarchive the chat instead     | -       |
+| `--json`    | Output as JSON (for scripting) | -       |
+
 ## `maestro-cli open-file <file-path>`
 
 Open a file as a preview tab in the Maestro desktop app (audio and video play in the floating media player instead; an http(s) URL to an MP4 or audio file streams in the player; a folder is revealed in the Files panel)
@@ -1280,18 +1289,20 @@ Export, validate, inspect, and import portable Cue pipeline and agent bundles
 
 Export one Cue pipeline or one agent to a deterministic bundle zip. Refuses, writing nothing, when an exported cue.yaml would fail bundle validate
 
-| Option                     | Description                                                                               | Default |
-| -------------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| `-a, --agent <id-or-name>` | Export this agent (exclusive with --pipeline)                                             | -       |
-| `-p, --pipeline <name>`    | Export this Cue pipeline (exclusive with --agent)                                         | -       |
-| `-o, --output <path>`      | Zip to write (default: ./&lt;name>.maestro-bundle.zip)                                    | -       |
-| `--allow-inline-secrets`   | Export subscriptions that hold a literal webhook.secret                                   | -       |
-| `--data-dir <path>`        | Read Maestro's data from this directory instead of the default                            | -       |
-| `--created-at <iso>`       | Record this ISO-8601 time as the bundle creation time                                     | -       |
-| `--no-claude-skills`       | Leave out Claude Code skills (.claude/skills)                                             | -       |
-| `--no-claude-mcp`          | Leave out .mcp.json (exported with secrets as $\{VAR\} references)                        | -       |
-| `--no-claude-memory`       | Leave out CLAUDE.md and Claude auto memory (exported with secret-looking tokens redacted) | -       |
-| `--json`                   | Output as JSON (for scripting)                                                            | -       |
+| Option                     | Description                                                                                                                                                                               | Default |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `-a, --agent <id-or-name>` | Export this agent (exclusive with --pipeline)                                                                                                                                             | -       |
+| `-p, --pipeline <name>`    | Export this Cue pipeline (exclusive with --agent)                                                                                                                                         | -       |
+| `-o, --output <path>`      | Zip to write (default: ./&lt;name>.maestro-bundle.zip)                                                                                                                                    | -       |
+| `--allow-inline-secrets`   | Export subscriptions that hold a literal webhook.secret                                                                                                                                   | -       |
+| `--data-dir <path>`        | Read Maestro's data from this directory instead of the default                                                                                                                            | -       |
+| `--created-at <iso>`       | Record this ISO-8601 time as the bundle creation time                                                                                                                                     | -       |
+| `--no-claude-skills`       | Leave out Claude Code skills (.claude/skills)                                                                                                                                             | -       |
+| `--no-claude-mcp`          | Leave out .mcp.json (exported with secrets as $\{VAR\} references)                                                                                                                        | -       |
+| `--no-claude-memory`       | Leave out CLAUDE.md and Claude auto memory (exported with secret-looking tokens redacted)                                                                                                 | -       |
+| `--no-cue`                 | Leave out the agent's Cue subscriptions (--agent only)                                                                                                                                    | -       |
+| `--exact`                  | Exact copy: also carry secret values, binary paths, SSH and other providers settings, and local folders, so an import on this machine restores the agent as it was. Do not share the file | -       |
+| `--json`                   | Output as JSON (for scripting)                                                                                                                                                            | -       |
 
 ## `maestro-cli bundle validate <bundle>`
 
@@ -1321,6 +1332,8 @@ Import a bundle into the running app, or with it closed into a data directory, p
 | `--data-dir <path>`          | Import into this Maestro data directory instead of the default                          | -       |
 | `--dry-run`                  | Report everything the import would do, including conflicts; write nothing               | -       |
 | `--force`                    | Overwrite conflicting agents, subscriptions, playbooks, files, and paths                | -       |
+| `-g, --group <id>`           | Put the agents the import creates in this Left Bar group                                | -       |
+| `--no-local`                 | Ignore an exact copy's machine data (secret values, binary paths, SSH, folders)         | -       |
 | `--reject-shell-commands`    | Refuse the import, before anything is written, if any subscription runs a shell command | -       |
 | `--json`                     | Output as JSON (for scripting): one document, after the import                          | -       |
 
@@ -1522,34 +1535,35 @@ Remove an agent from the Maestro desktop app
 
 Update an existing agent's group, working directory, and per-agent settings
 
-| Option                             | Description                                                                                    | Default |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------- | ------- |
-| `-g, --group <id>`                 | Move the agent to this group (use "none" to ungroup; supports partial IDs)                     | -       |
-| `-d, --cwd <path>`                 | Change the agent's working directory (resolved to absolute; agent must be stopped)             | -       |
-| `--ssh-remote <id>`                | Set the SSH remote for remote execution (use "none" to revert to local; agent must be stopped) | -       |
-| `--ssh-cwd <path>`                 | Working directory override on the SSH remote                                                   | -       |
-| `--sync-history-to-remote <bool>`  | Sync history entries to .maestro/history/ on the remote host (true/false)                      | -       |
-| `--nudge <message>`                | Nudge message appended to every message (empty string clears)                                  | -       |
-| `--new-session-message <message>`  | Message prefixed to the first message of new sessions (empty string clears)                    | -       |
-| `--custom-path <path>`             | Override the agent binary path (empty string clears)                                           | -       |
-| `--custom-args <args>`             | Custom CLI arguments for the agent (empty string clears)                                       | -       |
-| `--env <KEY=VALUE>`                | Set an environment variable (repeatable; replaces the env map)                                 | `[]`    |
-| `--clear-env`                      | Clear all per-agent environment variables                                                      | -       |
-| `--model <model>`                  | Model override (e.g. sonnet, opus; empty string clears)                                        | -       |
-| `--effort <level>`                 | Effort/reasoning level override (empty string clears)                                          | -       |
-| `--context-window <size>`          | Context window size in tokens (0 or "none" clears)                                             | -       |
-| `--token-source <mode>`            | Claude token source: api \| tui \| dynamic (Claude Code agents only)                           | -       |
-| `--maestro-p-path <path>`          | Override the maestro-p binary path (empty string clears)                                       | -       |
-| `--codex-transport <transport>`    | Codex transport: exec \| app-server (experimental, enables steering; Codex only)               | -       |
-| `--bookmark <bool>`                | Bookmark the agent in the Left Bar (true/false)                                                | -       |
-| `--provider <type>`                | Translate owned conversations and selected project knowledge to another provider               | -       |
-| `--force`                          | Alias for --accept-translation-limitations                                                     | -       |
-| `--dry-run`                        | Plan provider migration without native writes (requires --provider)                            | -       |
-| `--accept-translation-limitations` | Accept the reported unverified or partial conversion limitations                               | -       |
-| `--migration <action>`             | Migration operation: plan \| apply \| status \| recover \| rollback                            | -       |
-| `--migration-plan <id>`            | Use the reviewed plan or inspect/recover a specific operation ID                               | -       |
-| `--translation-resource <path>`    | Select one user-level resource (repeatable; no account-global import)                          | `[]`    |
-| `--json`                           | Output as JSON (for scripting)                                                                 | -       |
+| Option                             | Description                                                                                                                         | Default |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `-g, --group <id>`                 | Move the agent to this group (use "none" to ungroup; supports partial IDs)                                                          | -       |
+| `-d, --cwd <path>`                 | Change the agent's working directory (resolved to absolute; agent must be stopped)                                                  | -       |
+| `--ssh-remote <id>`                | Set the SSH remote for remote execution (use "none" to revert to local; agent must be stopped)                                      | -       |
+| `--ssh-cwd <path>`                 | Working directory override on the SSH remote                                                                                        | -       |
+| `--sync-history-to-remote <bool>`  | Sync history entries to .maestro/history/ on the remote host (true/false)                                                           | -       |
+| `--nudge <message>`                | Nudge message appended to every message (empty string clears)                                                                       | -       |
+| `--new-session-message <message>`  | Message prefixed to the first message of new sessions (empty string clears)                                                         | -       |
+| `--custom-path <path>`             | Override the agent binary path (empty string clears)                                                                                | -       |
+| `--custom-args <args>`             | Custom CLI arguments for the agent (empty string clears)                                                                            | -       |
+| `--env <KEY=VALUE>`                | Set an environment variable (repeatable; replaces the env map)                                                                      | `[]`    |
+| `--clear-env`                      | Clear all per-agent environment variables                                                                                           | -       |
+| `--model <model>`                  | Model override (e.g. sonnet, opus; empty string clears)                                                                             | -       |
+| `--effort <level>`                 | Effort/reasoning level override (empty string clears)                                                                               | -       |
+| `--context-window <size>`          | Context window size in tokens (0 or "none" clears)                                                                                  | -       |
+| `--token-source <mode>`            | Claude token source: api \| tui \| dynamic (Claude Code agents only)                                                                | -       |
+| `--maestro-p-path <path>`          | Override the maestro-p binary path (empty string clears)                                                                            | -       |
+| `--codex-transport <transport>`    | Codex transport: exec \| app-server (experimental, enables steering; Codex only)                                                    | -       |
+| `--bookmark <bool>`                | Bookmark the agent in the Left Bar (true/false)                                                                                     | -       |
+| `--provider <type>`                | Switch to another provider; tabs keep their transcripts and start fresh conversations there                                         | -       |
+| `--convert`                        | With --provider: also convert owned conversations and selected project knowledge (opt-in; implied by the translation options below) | -       |
+| `--force`                          | Alias for --accept-translation-limitations                                                                                          | -       |
+| `--dry-run`                        | Plan provider migration without native writes (requires --provider)                                                                 | -       |
+| `--accept-translation-limitations` | Accept the reported unverified or partial conversion limitations                                                                    | -       |
+| `--migration <action>`             | Migration operation: plan \| apply \| status \| recover \| rollback                                                                 | -       |
+| `--migration-plan <id>`            | Use the reviewed plan or inspect/recover a specific operation ID                                                                    | -       |
+| `--translation-resource <path>`    | Select one user-level resource (repeatable; no account-global import)                                                               | `[]`    |
+| `--json`                           | Output as JSON (for scripting)                                                                                                      | -       |
 
 ## `maestro-cli rename-agent <agent-id> <new-name>`
 
@@ -2579,6 +2593,75 @@ Open System Settings on the Full Disk Access list and watch for the switch (the 
 | `--reveal` | Also show MaestroRun.app in Finder, for dragging into the list | -       |
 | `--json`   | Output as JSON (for scripting)                                 | -       |
 
+## `maestro-cli dataview`
+
+Dataview: run a note's Dataview queries, manage the vault index, and choose the vaults DataviewJS trusts
+
+## `maestro-cli dataview query <file>`
+
+Run a note's dataview blocks with `this` bound to the note (DataviewJS blocks are desktop-only)
+
+| Option         | Description                                                               | Default |
+| -------------- | ------------------------------------------------------------------------- | ------- |
+| `--block <n>`  | Run only the n-th dataview block (1-based; dataviewjs fences not counted) | -       |
+| `--agent <id>` | Agent the note belongs to (default: the agent whose folder holds it)      | -       |
+| `--json`       | Output as JSON (for scripting)                                            | -       |
+
+## `maestro-cli dataview eval <file> <dql>`
+
+Run an ad-hoc DQL query with `this` bound to the note; start with = for an inline expression
+
+| Option         | Description                                                          | Default |
+| -------------- | -------------------------------------------------------------------- | ------- |
+| `--agent <id>` | Agent the note belongs to (default: the agent whose folder holds it) | -       |
+| `--json`       | Output as JSON (for scripting)                                       | -       |
+
+## `maestro-cli dataview index`
+
+Inspect or rebuild the Dataview index of a vault
+
+## `maestro-cli dataview index status [root]`
+
+Show the open vault indexes, or one vault root (pages, revision, watcher, cache)
+
+| Option         | Description                                                   | Default |
+| -------------- | ------------------------------------------------------------- | ------- |
+| `--agent <id>` | Agent whose SSH remote holds the root (default: a local root) | -       |
+| `--json`       | Output as JSON (for scripting)                                | -       |
+
+## `maestro-cli dataview index rebuild <root>`
+
+Drop a vault root's index cache and index it again from scratch
+
+| Option         | Description                                                   | Default |
+| -------------- | ------------------------------------------------------------- | ------- |
+| `--agent <id>` | Agent whose SSH remote holds the root (default: a local root) | -       |
+| `--json`       | Output as JSON (for scripting)                                | -       |
+
+## `maestro-cli dataview trust <root>`
+
+Trust a vault root: its DataviewJS blocks run in the sandbox without asking
+
+| Option   | Description                    | Default |
+| -------- | ------------------------------ | ------- |
+| `--json` | Output as JSON (for scripting) | -       |
+
+## `maestro-cli dataview untrust <root>`
+
+Stop trusting a vault root: its DataviewJS blocks ask before they run
+
+| Option   | Description                    | Default |
+| -------- | ------------------------------ | ------- |
+| `--json` | Output as JSON (for scripting) | -       |
+
+## `maestro-cli dataview trusted`
+
+List the vault roots whose DataviewJS blocks run without asking
+
+| Option   | Description                    | Default |
+| -------- | ------------------------------ | ------- |
+| `--json` | Output as JSON (for scripting) | -       |
+
 ## `maestro-cli quick-chat`
 
 Drive the Quick Chat window: a floating chat with one agent, summoned by a hotkey
@@ -2699,6 +2782,14 @@ Open a tab of the chat in the main Maestro window: the tab a message went to, or
 ## `maestro-cli quick-chat new-tab [message-id]`
 
 Send a message to a new tab instead of the tab it went to: out of the queue, or stopped and sent again if it already ran (default: the latest queued one)
+
+| Option   | Description                    | Default |
+| -------- | ------------------------------ | ------- |
+| `--json` | Output as JSON (for scripting) | -       |
+
+## `maestro-cli quick-chat steer [message-id]`
+
+Steer a queued message into the reply already running in its tab, so the agent changes course now instead of answering it afterwards (default: the latest steerable one)
 
 | Option   | Description                    | Default |
 | -------- | ------------------------------ | ------- |
@@ -3005,6 +3096,16 @@ Show token usage, cost, and tokens per second (average and peak) per provider an
 | `-r, --range <range>` | Time range: day, week, month, quarter, year, all (default: week) | -       |
 | `--refresh`           | Re-read changed transcripts instead of the app's cached result   | -       |
 | `--json`              | Output the full token usage object as JSON                       | -       |
+
+## `maestro-cli stats-indexing`
+
+Show progress of a usage-data scan (a one-time re-read after an upgrade, or a first index)
+
+| Option                | Description                                                   | Default |
+| --------------------- | ------------------------------------------------------------- | ------- |
+| `--wait`              | Block until no scan is running, printing progress each second | -       |
+| `--timeout <seconds>` | With --wait, give up after this many seconds (exit code 1)    | -       |
+| `--json`              | Output as JSON                                                | -       |
 
 ## `maestro-cli stats-query <sql>`
 

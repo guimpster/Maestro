@@ -62,6 +62,7 @@ import {
 import { registerWebLoginHandlers } from './webLogin';
 import { registerComputerHistoryHandlers } from './computerHistory';
 import { registerMaestroRunHandlers } from './maestroRun';
+import { registerDataviewHandlers, DataviewHandlerDependencies } from './dataview';
 import { registerLeaderboardHandlers, LeaderboardHandlerDependencies } from './leaderboard';
 import { registerNotificationHistoryHandlers } from './notification-history';
 import { registerNotificationsHandlers } from './notifications';
@@ -147,6 +148,8 @@ export type { WebHandlerDependencies };
 export { registerWebLoginHandlers };
 export { registerComputerHistoryHandlers };
 export { registerMaestroRunHandlers };
+export { registerDataviewHandlers };
+export type { DataviewHandlerDependencies };
 export { registerLeaderboardHandlers };
 export type { LeaderboardHandlerDependencies };
 export { registerNotificationsHandlers, registerNotificationHistoryHandlers };
@@ -410,13 +413,8 @@ export function registerAllHandlers(deps: HandlerDependencies): void {
 	});
 	// Register Core Prompts handlers (no dependencies needed)
 	registerPromptsHandlers();
-	// Register project Memory handlers (Claude Code per-project memory viewer)
-	registerMemoryHandlers({
-		sessionsStore: deps.sessionsStore,
-		settingsStore: deps.settingsStore,
-		agentConfigsStore: deps.agentConfigsStore,
-		getAgentDetector: deps.getAgentDetector,
-	});
+	// Register agent Memory handlers (Claude Code per project, Codex per account)
+	registerMemoryHandlers();
 	// Register tab lifecycle handlers (renderer -> main tab-close notification)
 	registerTabsHandlers();
 	// Register Context Timeline capture handlers (per-agent turn history backfill)

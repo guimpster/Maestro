@@ -668,6 +668,8 @@ const mockMaestro = {
 	},
 	stats: {
 		recordQuery: vi.fn().mockResolvedValue({ success: true }),
+		getIndexingState: vi.fn().mockResolvedValue({ jobs: [] }),
+		onIndexingUpdate: vi.fn(() => () => {}),
 		getTokenUsage: vi.fn().mockResolvedValue({
 			totals: {
 				inputTokens: 0,
@@ -889,6 +891,22 @@ const mockMaestro = {
 		requestAccess: vi.fn().mockResolvedValue(null),
 		readyPath: vi.fn().mockResolvedValue(null),
 		onStatusChanged: vi.fn(() => () => {}),
+	},
+	// Dataview (Encore Feature, off by default). Queries never resolve on their
+	// own; a test that renders a block sets the answer it needs.
+	dataview: {
+		query: vi.fn(() => new Promise(() => {})),
+		queryInline: vi.fn(() => new Promise(() => {})),
+		status: vi.fn().mockResolvedValue([]),
+		rebuild: vi.fn().mockResolvedValue(null),
+		jsSnapshot: vi.fn(() => new Promise(() => {})),
+		readInRoot: vi.fn(() => new Promise(() => {})),
+		jsRoot: vi.fn(() => new Promise(() => {})),
+		jsRunOnce: vi.fn(() => new Promise(() => {})),
+		trustedRoots: vi.fn().mockResolvedValue([]),
+		trust: vi.fn(() => new Promise(() => {})),
+		untrust: vi.fn(() => new Promise(() => {})),
+		onChanged: vi.fn(() => () => {}),
 	},
 	// Quick Chat (floating window + its engine). Subscriptions return a no-op
 	// unsubscribe so App's engine hook mounts and cleans up in every render test.

@@ -228,6 +228,8 @@ import type { FirstPartyBridgeState } from '../main/plugins/first-party-bridge';
 import type { FirstPartyEncoreFlag } from '../shared/plugins/first-party';
 import type { AgentRunApi } from '../main/preload/agentRun';
 import type { QuickChatApi } from '../main/preload/quickChat';
+import type { FloatingWidgetsApi } from '../main/preload/floatingWidgets';
+import type { MemoryApi } from '../main/preload/memory';
 import type { BrowserOp } from '../shared/coworkingBrowser';
 import type { HistoryEntry } from '../shared/types';
 import type { SnoozeCommandRequest, SnoozeCommandResult } from '../shared/snoozeCommands';
@@ -243,6 +245,7 @@ import type { WindowCommandRequest, WindowCommandResult } from '../shared/window
 import type { WebUserPublic } from '../shared/webLogin';
 import type { ComputerHistoryApi } from '../main/preload/computerHistory';
 import type { MaestroRunApi } from '../main/preload/maestroRun';
+import type { DataviewApi } from '../main/preload/dataview';
 
 interface MaestroAPI {
 	// Context merging API (for session context transfer and grooming)
@@ -845,6 +848,10 @@ interface MaestroAPI {
 			callback: (chatId: string, responseChannel: string) => void
 		) => () => void;
 		sendRemoteStopGroupChatResponse: (responseChannel: string, success: boolean) => void;
+		onRemoteArchiveGroupChat: (
+			callback: (chatId: string, archived: boolean, responseChannel: string) => void
+		) => () => void;
+		sendRemoteArchiveGroupChatResponse: (responseChannel: string, success: boolean) => void;
 		onRemoteSendGroupChatMessage: (
 			callback: (chatId: string, message: string, responseChannel: string) => void
 		) => () => void;
@@ -1958,6 +1965,11 @@ interface MaestroAPI {
 	 * the readiness that gates its system-prompt section).
 	 */
 	maestroRun: MaestroRunApi;
+	/**
+	 * Dataview (DQL queries against the main-process vault index, index status and
+	 * rebuild, and the `dataview:changed` push). The web-desktop bridge forwards it.
+	 */
+	dataview: DataviewApi;
 	agents: {
 		translateProvider: (request: TranslationRequest) => Promise<TranslationReport>;
 		detect: (sshRemoteId?: string) => Promise<AgentConfig[]>;
@@ -3994,6 +4006,11 @@ interface MaestroAPI {
 			query?: import('../shared/tokenUsage').TokenUsageQuery,
 			force?: boolean
 		) => Promise<import('../shared/tokenUsage').TokenUsageAggregate>;
+		// Progress of the long transcript scans behind the usage caches
+		getIndexingState: () => Promise<import('../shared/statsIndexing').StatsIndexingState>;
+		onIndexingUpdate: (
+			callback: (state: import('../shared/statsIndexing').StatsIndexingState) => void
+		) => () => void;
 		// Get aggregated stats for dashboard display
 		getAggregation: (
 			range: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'all'
@@ -4943,74 +4960,8 @@ interface MaestroAPI {
 		clearCaptures: (sessionId: string | null) => Promise<{ success: boolean; error?: string }>;
 	};
 
-	// Per-project memory API (Claude Code memory viewer)
-	memory: {
-		list: (
-			projectPath: string,
-			agentId?: string
-		) => Promise<{
-			success: boolean;
-			directoryPath?: string;
-			exists?: boolean;
-			entries?: Array<{
-				name: string;
-				size: number;
-				createdAt: string;
-				modifiedAt: string;
-			}>;
-			stats?: {
-				fileCount: number;
-				firstCreatedAt: string | null;
-				lastModifiedAt: string | null;
-				totalBytes: number;
-			};
-			error?: string;
-		}>;
-		read: (
-			projectPath: string,
-			filename: string,
-			agentId?: string
-		) => Promise<{ success: boolean; content?: string; error?: string }>;
-		write: (
-			projectPath: string,
-			filename: string,
-			content: string,
-			agentId?: string
-		) => Promise<{ success: boolean; error?: string }>;
-		create: (
-			projectPath: string,
-			filename: string,
-			content: string,
-			agentId?: string
-		) => Promise<{ success: boolean; error?: string }>;
-		delete: (
-			projectPath: string,
-			filename: string,
-			agentId?: string
-		) => Promise<{ success: boolean; error?: string }>;
-		search: (
-			projectPath: string,
-			query: string,
-			agentId?: string
-		) => Promise<{
-			success: boolean;
-			matches?: Array<{ name: string; matchedName: boolean; snippet?: string }>;
-			error?: string;
-		}>;
-		orphans: (
-			projectPath: string,
-			agentId?: string
-		) => Promise<{
-			success: boolean;
-			orphans?: string[];
-			brokenLinks?: { source: string; target: string }[];
-			error?: string;
-		}>;
-		getPath: (
-			projectPath: string,
-			agentId?: string
-		) => Promise<{ success: boolean; path?: string; error?: string }>;
-	};
+	// Agent memory API (Memory Viewer: Claude Code per project, Codex per account)
+	memory: MemoryApi;
 
 	// Coworking API (per-agent MCP installer + terminal registry sync)
 	coworking: {
@@ -5192,6 +5143,8 @@ interface MaestroAPI {
 	};
 	/** Quick Chat: the floating chat window and the engine that runs it. */
 	quickChat: QuickChatApi;
+	/** Floating widgets: always-on-top desktop windows and the state relay between them. */
+	floatingWidgets: FloatingWidgetsApi;
 	/**
 	 * Codex `visualize` content references. `load` builds the isolated document
 	 * for one fragment and returns the id/revision to frame it by.

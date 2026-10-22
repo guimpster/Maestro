@@ -557,6 +557,9 @@ maestro-cli update-agent <agent-id> --clear-env
 # Set the Claude token source (Claude Code agents only): api | tui | dynamic
 maestro-cli update-agent <agent-id> --token-source tui
 
+# Switch provider without converting (tabs keep transcripts, start fresh on Codex)
+maestro-cli update-agent <agent-id> --provider codex
+
 # Review native provider translation before applying it (desktop required)
 maestro-cli update-agent <agent-id> --provider codex --dry-run --json
 
@@ -579,7 +582,9 @@ The group update reuses the same write path as drag-and-drop in the Left Bar. Th
 
 For text fields, passing an empty string (for example `--nudge ""`) clears the field. `--env` replaces the environment map with the provided pairs; `--clear-env` empties it. `--context-window 0` (or `none`) clears the context-window override. `--token-source` only carries meaning for Claude Code agents: `api` uses `claude --print` (per-token API credit), `tui` drives the maestro-p TUI (Max-plan quota), and `dynamic` starts on the TUI and falls back to API when a usage window hits its limit. The `tui` and `dynamic` modes need the [maestro-p helper](https://runmaestro.ai/maestro-p/) on PATH; it is bundled locally, but for SSH remotes it must be installed on the remote host. See [Provider Notes](/provider-notes#token-source-max-plan-vs-api). `--codex-transport` only carries meaning for Codex agents: `exec` (the default) runs `codex exec`, and `app-server` is an experimental opt-in that lets a running chat turn be steered, on this machine or an SSH remote (which needs a `codex` there that has `app-server`). Image, Auto Run, and Cue turns keep using `codex exec` either way.
 
-`--provider` uses the desktop's native conversation translation flow. Review it with `--dry-run --json`, take the returned `plan.id`, then apply that ID with `--migration-plan` and `--accept-translation-limitations` if you accept the reported limits (`--force` is an alias). Acceptance does not bypass a blocked plan. `--migration` supports `plan`, `apply`, `status`, `recover`, and `rollback`; `--translation-resource` selects an individual user resource and is repeatable. Tabs, transcripts, drafts, queued messages, and file previews are preserved. This changes the agent's active provider. Inspect the reported state and exit status before reporting completion; a deferred or failed switch exits nonzero. Provider translation requires a matching desktop build and is refused by a headless host without changing agent state. See [Provider Notes](/provider-notes#switching-providers-with-memory-and-session-carry) for supported versions, live evidence, and remaining limitations.
+`--provider` on its own is a plain switch, the same as Edit Agent with **Convert memory and session history** unchecked: tabs keep their transcripts, each starts a fresh conversation on the new provider, and switching back resumes the old one. Provider-specific settings are parked per provider and restored on the way back. JSON output reports `converted: false` and any `notices` (queued messages whose model or effort could not carry across).
+
+`--convert` opts into the desktop's native conversation translation flow; every translation option below implies it. Review it with `--dry-run --json`, take the returned `plan.id`, then apply that ID with `--migration-plan` and `--accept-translation-limitations` if you accept the reported limits (`--force` is an alias). Acceptance does not bypass a blocked plan. `--migration` supports `plan`, `apply`, `status`, `recover`, and `rollback`; `--translation-resource` selects an individual user resource and is repeatable. Tabs, transcripts, drafts, queued messages, and file previews are preserved. This changes the agent's active provider. Inspect the reported state and exit status before reporting completion; a deferred or failed switch exits nonzero. Provider translation requires a matching desktop build and is refused by a headless host without changing agent state. See [Provider Notes](/provider-notes#switching-providers-with-memory-and-session-carry) for supported versions, live evidence, and remaining limitations.
 
 | Flag                               | Description                                                                                                           | Default |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -600,7 +605,8 @@ For text fields, passing an empty string (for example `--nudge ""`) clears the f
 | `--token-source <mode>`            | Claude Code token source: `api`, `tui`, or `dynamic` (Claude Code agents only)                                        | -       |
 | `--maestro-p-path <path>`          | Override the maestro-p binary path. Empty string clears                                                               | -       |
 | `--codex-transport <transport>`    | Codex transport: `exec` (standard) or `app-server` (experimental, enables steering a running turn). Codex agents only | -       |
-| `--provider <type>`                | Translate native conversations to another provider (desktop required)                                                 | -       |
+| `--provider <type>`                | Switch the agent to another provider without converting (desktop required)                                            | -       |
+| `--convert`                        | With `--provider`: convert native conversations and project memory too (opt-in)                                       | -       |
 | `--dry-run`                        | Plan translation without native writes; requires `--provider`                                                         | -       |
 | `--accept-translation-limitations` | Accept the reported conversion limits; blocked plans remain blocked                                                   | -       |
 | `--migration <action>`             | Plan, apply, inspect status, recover, or roll back a migration                                                        | -       |
@@ -1213,6 +1219,27 @@ maestro-cli maestro-run grant --reveal       # also show MaestroRun.app in Finde
 ```
 
 `grant` cannot switch the permission on: macOS has no prompt for Full Disk Access, so you flip the switch in System Settings and `status` reports `ready` once you have. These verbs set MaestroRun up. To run a script, use the launcher itself, at the path `status` prints.
+
+### Dataview
+
+Run a note's Dataview queries and get the same result File Preview renders. `this` is the note, and the query runs against the index of the vault that holds it, in the running app (local or over SSH). The CLI indexes nothing itself, so the app must be running.
+
+```bash
+maestro-cli dataview query "People/Pedram Amini.md"            # every dataview block in the note
+maestro-cli dataview query notes/today.md --block 2 --json     # only the 2nd dataview block
+maestro-cli dataview eval notes/today.md 'LIST FROM #meeting'  # an ad-hoc query
+maestro-cli dataview eval notes/today.md '= this.file.name'    # an inline expression
+maestro-cli dataview index status                              # every open vault index
+maestro-cli dataview index status ~/Vault --json
+maestro-cli dataview index rebuild ~/Vault                     # drop the cache and index again
+maestro-cli dataview trust ~/Vault                             # run the vault's DataviewJS blocks without asking
+maestro-cli dataview untrust ~/Vault                           # ask again before they run
+maestro-cli dataview trusted --json                            # the trusted vaults
+```
+
+`--block <n>` counts `dataview` fences only, from 1. A note's agent is the agent whose folder holds it; pass `--agent <id>` to choose one, and to name the SSH remote for `index status` and `index rebuild`. Tables fit the terminal width; `--json` prints the full result, with links as objects and dates as ISO strings. A `dataviewjs` block prints `DataviewJS renders in the desktop app only` and exits `2`; a bad `--block` or a note no agent owns also exits `2`, and a query error exits `1`.
+
+`trust`, `untrust`, and `trusted` edit and list the vaults whose `dataviewjs` blocks run without asking, the same list as **Trusted Vaults** in the Dataview settings and **Always trust this vault** on a block. The CLI never runs a script. A root is resolved against the current folder (`~` works) and stored without a trailing separator; it must be the vault root as the app names it (the folder that holds `.obsidian/`, or the agent's folder). `untrust` also ends that vault's **Run once** grants.
 
 ### Quick Chat
 

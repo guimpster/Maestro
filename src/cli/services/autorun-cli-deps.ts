@@ -106,6 +106,9 @@ export function createCliAutoRunDeps(session: SessionInfo): AutoRunDeps {
 							},
 							{
 								...autoRunTurnOptions(session),
+								// A task edits files unattended. The synopsis turn reuses
+								// autoRunTurnOptions and must stay read-only, so this lives here.
+								permissionMode: 'full',
 								appendSystemPrompt,
 								// A TUI task gets Auto Run's idle budget, not maestro-p's 300s.
 								maestroPMaxWaitSeconds: autoRunMaestroPMaxWaitSeconds({
@@ -134,7 +137,7 @@ export function createCliAutoRunDeps(session: SessionInfo): AutoRunDeps {
 								source: 'cli:goal',
 								prompt: request.prompt,
 							},
-							{ ...goalTurnOptions(session), appendSystemPrompt }
+							{ ...goalTurnOptions(session), permissionMode: 'full', appendSystemPrompt }
 						);
 					case 'goal-handoff':
 						return turn(
